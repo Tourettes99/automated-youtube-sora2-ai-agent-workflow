@@ -1,28 +1,38 @@
 # AI Agent GUI Requirements
+# Compatible with Python 3.12+
 
 # Core Dependencies
-google-generativeai>=0.3.0
-openai>=1.0.0
+google-generativeai>=0.8.0
+openai>=1.54.0
 
 # YouTube API
-google-auth>=2.0.0
-google-auth-oauthlib>=1.0.0
-google-auth-httplib2>=0.1.0
-google-api-python-client>=2.0.0
+google-auth>=2.35.0
+google-auth-oauthlib>=1.2.0
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.150.0
 
 # Video Processing
-opencv-python>=4.8.0
+opencv-python>=4.10.0.84
 ffmpeg-python>=0.2.0
-numpy>=1.24.0
-Pillow>=10.0.0
+numpy>=1.26.0,<3.0.0  # Python 3.12 requires numpy >= 1.26
+Pillow>=10.4.0
 
 # GUI (tkinter is built-in with Python)
 # No additional GUI dependencies needed
 
 # Utilities
-requests>=2.31.0
-python-dateutil>=2.8.0
+requests>=2.32.0
+python-dateutil>=2.9.0
+urllib3>=2.2.0
 
 # Optional but recommended
 tqdm>=4.66.0  # Progress bars
+PyYAML>=6.0.2
+
+# Watermark Remover Dependencies (integrated)
+basicsr>=1.4.2
+gfpgan>=1.3.8
+realesrgan>=0.3.0
+torch>=2.5.0
+torchvision>=0.20.0
 
