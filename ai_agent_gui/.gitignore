@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Application-specific
+settings.json
+client_secrets.json
+token.pickle
+
+# Logs
+logs/
+*.log
+
+# Output directories
+output/
+temp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Video files (optional - uncomment if you don't want to track videos)
+# *.mp4
+# *.avi
+# *.mov
+# *.mkv
+
+# Credentials and secrets
+*.key
+*.pem
+*.p12
+credentials.json
+

@@ -1,0 +1,28 @@
+# AI Agent GUI Requirements
+
+# Core Dependencies
+google-generativeai>=0.3.0
+openai>=1.0.0
+
+# YouTube API
+google-auth>=2.0.0
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.1.0
+google-api-python-client>=2.0.0
+
+# Video Processing
+opencv-python>=4.8.0
+ffmpeg-python>=0.2.0
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# GUI (tkinter is built-in with Python)
+# No additional GUI dependencies needed
+
+# Utilities
+requests>=2.31.0
+python-dateutil>=2.8.0
+
+# Optional but recommended
+tqdm>=4.66.0  # Progress bars
+
