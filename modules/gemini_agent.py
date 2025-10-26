@@ -5,6 +5,7 @@ Uses Google Gemini 2.5 Flash for intelligent workflow orchestration
 
 import google.generativeai as genai
 from typing import Dict, Optional
+from .utils import sanitize_text
 
 
 class GeminiAgent:
@@ -49,6 +50,8 @@ class GeminiAgent:
         try:
             response = self.model.generate_content(system_prompt)
             prompt = response.text.strip()
+            # Sanitize prompt to remove emojis and problematic characters
+            prompt = sanitize_text(prompt)
             return prompt
         except Exception as e:
             raise Exception(f"Failed to generate video prompt: {str(e)}")
@@ -79,13 +82,20 @@ class GeminiAgent:
         try:
             response = self.model.generate_content(system_prompt)
             import json
-            metadata = json.loads(response.text.strip())
+            response_text = sanitize_text(response.text.strip())
+            metadata = json.loads(response_text)
+            
+            # Sanitize all metadata fields
+            metadata['title'] = sanitize_text(metadata.get('title', 'AI Generated Video'))
+            metadata['description'] = sanitize_text(metadata.get('description', ''))
+            metadata['tags'] = [sanitize_text(tag) for tag in metadata.get('tags', [])]
+            
             return metadata
         except Exception as e:
             # Fallback metadata
             return {
                 "title": "AI Generated Video",
-                "description": f"Video generated using AI: {video_description}",
+                "description": f"Video generated using AI: {sanitize_text(video_description)}",
                 "tags": ["AI", "Generated", "Video", "Sora"]
             }
     

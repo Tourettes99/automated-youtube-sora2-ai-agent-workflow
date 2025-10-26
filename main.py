@@ -12,6 +12,10 @@ from pathlib import Path
 # Add project root to path
 sys.path.append(str(Path(__file__).parent))
 
+# Setup console encoding FIRST (before any imports that might print)
+from modules.utils import setup_console_encoding
+setup_console_encoding()
+
 from modules.settings_manager import SettingsManager
 from modules.workflow_manager import WorkflowManager
 from modules.logger import WorkflowLogger

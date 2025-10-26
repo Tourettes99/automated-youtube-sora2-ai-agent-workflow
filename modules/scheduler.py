@@ -7,6 +7,7 @@ from datetime import datetime, time as dt_time
 import time
 import threading
 from typing import Callable, Dict
+from .utils import safe_print
 
 
 class WorkflowScheduler:
@@ -57,13 +58,13 @@ class WorkflowScheduler:
             
             # Check if current time matches scheduled time (within 1 minute)
             if self.is_time_match(current_time, scheduled_time):
-                print(f"Scheduled time reached: {current_day} at {scheduled_time}")
+                safe_print(f"Scheduled time reached: {current_day} at {scheduled_time}")
                 
                 # Execute workflow callback
                 try:
                     self.workflow_callback(current_day)
                 except Exception as e:
-                    print(f"Error executing scheduled workflow: {e}")
+                    safe_print(f"Error executing scheduled workflow: {e}")
     
     def is_time_match(self, current_time: str, scheduled_time: str) -> bool:
         """
@@ -91,7 +92,7 @@ class WorkflowScheduler:
             return False
             
         except Exception as e:
-            print(f"Error comparing times: {e}")
+            safe_print(f"Error comparing times: {e}")
             return False
     
     def get_next_scheduled_run(self) -> str:

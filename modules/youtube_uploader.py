@@ -5,8 +5,10 @@ Handles video uploads to YouTube using YouTube Data API v3
 
 import os
 import pickle
+import json
 from pathlib import Path
 from typing import Dict, Optional
+from datetime import datetime, timedelta
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -15,6 +17,8 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
 
+from .utils import safe_print
+
 
 class YouTubeUploader:
     """Uploads videos to YouTube using the Data API v3"""
@@ -22,11 +26,110 @@ class YouTubeUploader:
     # OAuth 2.0 scopes
     SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
     
+    # YouTube API Quota limits (daily quota is 10,000 units)
+    # Upload costs approximately 1600 quota units
+    MAX_DAILY_UPLOADS = 6  # Conservative limit to stay within free tier
+    MAX_WEEKLY_UPLOADS = 30  # Weekly limit for safety
+    
     def __init__(self, client_secrets_file: str = "client_secrets.json"):
         self.client_secrets_file = Path(__file__).parent.parent / client_secrets_file
         self.credentials = None
         self.youtube = None
+        self.quota_tracker_file = Path(__file__).parent.parent / "youtube_quota_tracker.json"
+        self.quota_data = self.load_quota_tracker()
         self.authenticate()
+    
+    def load_quota_tracker(self) -> dict:
+        """Load quota tracking data"""
+        if self.quota_tracker_file.exists():
+            try:
+                with open(self.quota_tracker_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                safe_print(f"Error loading quota tracker: {e}")
+                return self.init_quota_data()
+        return self.init_quota_data()
+    
+    def init_quota_data(self) -> dict:
+        """Initialize quota data structure"""
+        return {
+            'daily_uploads': {},
+            'weekly_uploads': {},
+            'last_reset': datetime.now().isoformat()
+        }
+    
+    def save_quota_tracker(self):
+        """Save quota tracking data"""
+        try:
+            with open(self.quota_tracker_file, 'w', encoding='utf-8') as f:
+                json.dump(self.quota_data, f, indent=4)
+        except Exception as e:
+            safe_print(f"Error saving quota tracker: {e}")
+    
+    def check_quota_limit(self) -> tuple[bool, str]:
+        """
+        Check if we're within quota limits
+        
+        Returns:
+            (can_upload: bool, reason: str)
+        """
+        today = datetime.now().strftime('%Y-%m-%d')
+        current_week = datetime.now().strftime('%Y-W%W')
+        
+        # Clean old data (older than 8 days for daily, 5 weeks for weekly)
+        self.cleanup_old_quota_data()
+        
+        # Check daily limit
+        daily_count = self.quota_data['daily_uploads'].get(today, 0)
+        if daily_count >= self.MAX_DAILY_UPLOADS:
+            return False, f"Daily upload limit reached ({daily_count}/{self.MAX_DAILY_UPLOADS})"
+        
+        # Check weekly limit
+        weekly_count = self.quota_data['weekly_uploads'].get(current_week, 0)
+        if weekly_count >= self.MAX_WEEKLY_UPLOADS:
+            return False, f"Weekly upload limit reached ({weekly_count}/{self.MAX_WEEKLY_UPLOADS})"
+        
+        return True, f"OK - Daily: {daily_count}/{self.MAX_DAILY_UPLOADS}, Weekly: {weekly_count}/{self.MAX_WEEKLY_UPLOADS}"
+    
+    def increment_quota_counter(self):
+        """Increment upload counters"""
+        today = datetime.now().strftime('%Y-%m-%d')
+        current_week = datetime.now().strftime('%Y-W%W')
+        
+        # Increment daily counter
+        self.quota_data['daily_uploads'][today] = self.quota_data['daily_uploads'].get(today, 0) + 1
+        
+        # Increment weekly counter
+        self.quota_data['weekly_uploads'][current_week] = self.quota_data['weekly_uploads'].get(current_week, 0) + 1
+        
+        self.save_quota_tracker()
+    
+    def cleanup_old_quota_data(self):
+        """Remove old quota data to keep file size manageable"""
+        cutoff_date = datetime.now() - timedelta(days=8)
+        cutoff_week = (datetime.now() - timedelta(weeks=5)).strftime('%Y-W%W')
+        
+        # Clean daily data
+        to_remove = []
+        for date_str in self.quota_data['daily_uploads'].keys():
+            try:
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                if date_obj < cutoff_date:
+                    to_remove.append(date_str)
+            except:
+                pass
+        
+        for date_str in to_remove:
+            del self.quota_data['daily_uploads'][date_str]
+        
+        # Clean weekly data
+        to_remove = []
+        for week_str in self.quota_data['weekly_uploads'].keys():
+            if week_str < cutoff_week:
+                to_remove.append(week_str)
+        
+        for week_str in to_remove:
+            del self.quota_data['weekly_uploads'][week_str]
     
     def authenticate(self):
         """Authenticate with YouTube API using OAuth 2.0"""
@@ -44,9 +147,9 @@ class YouTubeUploader:
                 creds.refresh(Request())
             else:
                 if not self.client_secrets_file.exists():
-                    print(f"⚠️ Client secrets file not found: {self.client_secrets_file}")
-                    print("Please download OAuth 2.0 credentials from Google Cloud Console")
-                    print("and save as 'client_secrets.json' in the application directory")
+                    safe_print(f"Client secrets file not found: {self.client_secrets_file}")
+                    safe_print("Please download OAuth 2.0 credentials from Google Cloud Console")
+                    safe_print("and save as 'client_secrets.json' in the application directory")
                     return
                 
                 flow = InstalledAppFlow.from_client_secrets_file(
@@ -91,6 +194,13 @@ class YouTubeUploader:
         if not self.youtube:
             raise Exception("YouTube API not authenticated. Please check client_secrets.json")
         
+        # Check quota limits
+        can_upload, quota_msg = self.check_quota_limit()
+        if not can_upload:
+            raise Exception(f"Upload blocked: {quota_msg}. Please wait before uploading more videos.")
+        
+        safe_print(f"Quota check: {quota_msg}")
+        
         video_path = Path(video_file)
         if not video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video_file}")
@@ -118,7 +228,7 @@ class YouTubeUploader:
         )
         
         try:
-            print(f"Uploading video to YouTube: {title}")
+            safe_print(f"Uploading video to YouTube: {title}")
             
             # Execute upload
             request = self.youtube.videos().insert(
@@ -132,14 +242,17 @@ class YouTubeUploader:
                 status, response = request.next_chunk()
                 if status:
                     progress = int(status.progress() * 100)
-                    print(f"Upload progress: {progress}%")
+                    safe_print(f"Upload progress: {progress}%")
             
             video_id = response['id']
             video_url = f"https://www.youtube.com/watch?v={video_id}"
             
-            print(f"✓ Video uploaded successfully!")
-            print(f"  Video ID: {video_id}")
-            print(f"  URL: {video_url}")
+            # Increment quota counter after successful upload
+            self.increment_quota_counter()
+            
+            safe_print(f"Video uploaded successfully!")
+            safe_print(f"  Video ID: {video_id}")
+            safe_print(f"  URL: {video_url}")
             
             return video_id
             
@@ -188,7 +301,7 @@ class YouTubeUploader:
                 }
             ).execute()
             
-            print(f"✓ Video updated: {video_id}")
+            safe_print(f"Video updated: {video_id}")
             return True
             
         except HttpError as e:
@@ -201,7 +314,7 @@ class YouTubeUploader:
         
         try:
             self.youtube.videos().delete(id=video_id).execute()
-            print(f"✓ Video deleted: {video_id}")
+            safe_print(f"Video deleted: {video_id}")
             return True
         except HttpError as e:
             raise Exception(f"YouTube API error: {e}")

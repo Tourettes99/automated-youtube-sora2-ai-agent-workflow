@@ -28,13 +28,26 @@ class WorkflowLogger:
     
     def setup_logging(self):
         """Setup logging configuration"""
+        import sys
+        
+        # Force UTF-8 encoding for stdout/stderr on Windows
+        if sys.platform == 'win32':
+            import io
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        
+        # Create stream handler with UTF-8 encoding
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        
+        # Create file handler with UTF-8 encoding
+        file_handler = logging.FileHandler(self.log_file, encoding='utf-8', errors='replace')
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(self.log_file, encoding='utf-8'),
-                logging.StreamHandler()
-            ]
+            handlers=[file_handler, stream_handler]
         )
         self.logger = logging.getLogger(__name__)
     
@@ -58,15 +71,28 @@ class WorkflowLogger:
             print(f"Error saving upload tracker: {e}")
     
     def log(self, message: str, level: str = "INFO"):
-        """Log a message"""
+        """Log a message with safe encoding"""
+        # Remove or replace problematic Unicode characters for logging
+        safe_message = self.sanitize_message(message)
+        
         if level == "INFO":
-            self.logger.info(message)
+            self.logger.info(safe_message)
         elif level == "WARNING":
-            self.logger.warning(message)
+            self.logger.warning(safe_message)
         elif level == "ERROR":
-            self.logger.error(message)
+            self.logger.error(safe_message)
         elif level == "DEBUG":
-            self.logger.debug(message)
+            self.logger.debug(safe_message)
+    
+    def sanitize_message(self, message: str) -> str:
+        """Sanitize message to prevent encoding errors"""
+        try:
+            # Try to encode/decode to catch problematic characters
+            message.encode('utf-8', errors='replace').decode('utf-8')
+            return message
+        except Exception:
+            # If all else fails, use ASCII-safe version
+            return message.encode('ascii', errors='replace').decode('ascii')
     
     def has_uploaded_today(self, day_of_week: str) -> bool:
         """Check if a video has been uploaded today for the given day of week"""

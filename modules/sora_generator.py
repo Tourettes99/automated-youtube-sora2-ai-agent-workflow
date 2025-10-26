@@ -7,6 +7,7 @@ from openai import OpenAI
 from pathlib import Path
 import time
 import requests
+from .utils import safe_print
 
 
 class SoraGenerator:
@@ -46,9 +47,9 @@ class SoraGenerator:
             # This is a placeholder implementation based on expected API structure
             # You'll need to update this when Sora API is officially released
             
-            print(f"Generating video with Sora 2...")
-            print(f"Prompt: {prompt}")
-            print(f"Duration: {duration}s, Resolution: {resolution}")
+            safe_print(f"Generating video with Sora 2...")
+            safe_print(f"Prompt: {prompt}")
+            safe_print(f"Duration: {duration}s, Resolution: {resolution}")
             
             # Placeholder: Create a request to Sora API when available
             # response = self.client.videos.create(
@@ -62,8 +63,8 @@ class SoraGenerator:
             # In production, replace this with actual Sora API calls
             
             # Simulated response - REPLACE WITH ACTUAL API CALL
-            print("⚠️ NOTE: Sora API integration pending. Using placeholder.")
-            print("Please update this module when Sora API is available.")
+            safe_print("NOTE: Sora API integration pending. Using placeholder.")
+            safe_print("Please update this module when Sora API is available.")
             
             # Create a placeholder video file for testing
             # In production, this will download the actual generated video
@@ -81,10 +82,11 @@ class SoraGenerator:
                 # Create placeholder file for testing
                 output_file.write_text(
                     f"Placeholder video\nPrompt: {prompt}\n"
-                    f"Duration: {duration}s\nResolution: {resolution}"
+                    f"Duration: {duration}s\nResolution: {resolution}",
+                    encoding='utf-8'
                 )
             
-            print(f"✓ Video generated: {output_file}")
+            safe_print(f"Video generated: {output_file}")
             return str(output_file)
             
         except Exception as e:
