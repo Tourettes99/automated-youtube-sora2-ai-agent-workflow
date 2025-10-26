@@ -175,10 +175,11 @@ class YouTubeUploader:
         description: str = "",
         tags: list = None,
         category_id: str = "22",  # People & Blogs
-        privacy_status: str = "public"
+        privacy_status: str = "public",
+        upload_as_shorts: bool = False
     ) -> Optional[str]:
         """
-        Upload a video to YouTube
+        Upload a video to YouTube (Main Channel or YouTube Shorts)
         
         Args:
             video_file: Path to the video file
@@ -187,6 +188,7 @@ class YouTubeUploader:
             tags: List of tags
             category_id: YouTube category ID (22 = People & Blogs)
             privacy_status: public, private, or unlisted
+            upload_as_shorts: If True, upload as YouTube Shorts with optimizations
             
         Returns:
             Video ID if successful, None otherwise
@@ -205,12 +207,28 @@ class YouTubeUploader:
         if not video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video_file}")
         
+        # Optimize metadata for YouTube Shorts if requested
+        if upload_as_shorts:
+            safe_print("📱 Uploading as YouTube Shorts")
+            
+            # Add #Shorts hashtag to description if not present
+            shorts_hashtag = "#Shorts"
+            if shorts_hashtag not in description:
+                description = f"{description}\n\n{shorts_hashtag}" if description else shorts_hashtag
+            
+            # Add Shorts-specific tags
+            shorts_tags = ["Shorts", "Short", "YouTubeShorts"]
+            all_tags = list(set((tags or []) + shorts_tags))
+        else:
+            safe_print("📺 Uploading to main YouTube channel")
+            all_tags = tags or []
+        
         # Prepare video metadata
         body = {
             'snippet': {
                 'title': title,
                 'description': description,
-                'tags': tags or [],
+                'tags': all_tags,
                 'categoryId': category_id
             },
             'status': {
@@ -245,14 +263,21 @@ class YouTubeUploader:
                     safe_print(f"Upload progress: {progress}%")
             
             video_id = response['id']
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            
+            # Generate appropriate URL based on upload type
+            if upload_as_shorts:
+                video_url = f"https://www.youtube.com/shorts/{video_id}"
+            else:
+                video_url = f"https://www.youtube.com/watch?v={video_id}"
             
             # Increment quota counter after successful upload
             self.increment_quota_counter()
             
-            safe_print(f"Video uploaded successfully!")
+            safe_print(f"✅ Video uploaded successfully!")
             safe_print(f"  Video ID: {video_id}")
             safe_print(f"  URL: {video_url}")
+            if upload_as_shorts:
+                safe_print(f"  Format: YouTube Shorts")
             
             return video_id
             

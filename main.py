@@ -245,6 +245,19 @@ class AIAgentGUI:
         self.video_resolution.grid(row=1, column=1, pady=5, padx=5)
         self.video_resolution.set(self.settings_manager.get("video_resolution", "1080p"))
         
+        tk.Label(video_frame, text="Upload Destination:").grid(row=2, column=0, sticky="w", pady=5)
+        self.upload_destination = ttk.Combobox(
+            video_frame,
+            values=["Main Channel", "YouTube Shorts"],
+            width=18,
+            state="readonly"
+        )
+        self.upload_destination.grid(row=2, column=1, pady=5, padx=5)
+        # Map from internal value to display value
+        current_dest = self.settings_manager.get("upload_destination", "main_channel")
+        display_dest = "YouTube Shorts" if current_dest == "youtube_shorts" else "Main Channel"
+        self.upload_destination.set(display_dest)
+        
         # Save button
         save_btn = tk.Button(
             scrollable_frame,
@@ -370,6 +383,10 @@ class AIAgentGUI:
     def save_settings(self):
         """Save all settings"""
         try:
+            # Map display value to internal value for upload destination
+            dest_display = self.upload_destination.get()
+            dest_internal = "youtube_shorts" if dest_display == "YouTube Shorts" else "main_channel"
+            
             settings = {
                 "openai_api_key": self.openai_key_entry.get(),
                 "gemini_api_key": self.gemini_key_entry.get(),
@@ -377,12 +394,14 @@ class AIAgentGUI:
                 "youtube_client_secrets": self.youtube_secrets_entry.get(),
                 "agent_instructions": self.agent_instructions.get("1.0", "end-1c"),
                 "video_duration": int(self.video_duration.get()),
-                "video_resolution": self.video_resolution.get()
+                "video_resolution": self.video_resolution.get(),
+                "upload_destination": dest_internal
             }
             
             self.settings_manager.update(settings)
             messagebox.showinfo("Success", "Settings saved successfully!")
             self.logger.log("Settings updated successfully")
+            self.logger.log(f"Upload destination set to: {dest_display}")
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save settings: {str(e)}")

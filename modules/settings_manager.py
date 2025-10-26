@@ -36,6 +36,7 @@ class SettingsManager:
             "agent_instructions": "Generate engaging, high-quality videos suitable for YouTube. Focus on trending topics, educational content, or entertainment. Keep videos between 30-60 seconds.",
             "video_duration": 30,
             "video_resolution": "1080p",
+            "upload_destination": "main_channel",  # Options: "main_channel" or "youtube_shorts"
             "weekly_schedule": {},
             "output_directory": "output",
             "temp_directory": "temp"
